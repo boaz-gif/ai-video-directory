@@ -1,0 +1,320 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+// Get all models
+const models = await getCollection('models');
+
+// Sort models alphabetically
+const sortedModels = models.sort((a, b) => a.data.name.localeCompare(b.data.name));
+
+// Status badge styling
+const statusStyles: Record<string, string> = {
+  released: 'badge-released',
+  beta: 'badge-beta',
+  alpha: 'badge-alpha',
+  waitlist: 'badge-waitlist',
+  research: 'badge-research',
+};
+
+// Render star rating
+const renderStars = (rating: number) => {
+  return Array.from({ length: 5 }, (_, i) => 
+    i < rating ? '★' : '☆'
+  ).join('');
+};
+---
+
+<BaseLayout title="Compare Models" description="Compare AI video generation models side by side. Evaluate features, pricing, and capabilities to find the best tool for your needs.">
+  <!-- Breadcrumb -->
+  <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <nav class="flex items-center gap-2 text-sm text-slate-400">
+      <a href="/" class="hover:text-white transition-colors">Home</a>
+      <span>/</span>
+      <span class="text-white">Compare</span>
+    </nav>
+  </div>
+
+  <!-- Hero Section -->
+  <section class="hero-gradient py-12 sm:py-16">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-3xl mx-auto">
+        <h1 class="text-3xl sm:text-4xl font-bold text-white mb-4">
+          Compare AI Video Models
+        </h1>
+        <p class="text-lg text-slate-400">
+          Select models to compare side by side. Evaluate features, pricing, and capabilities to find the perfect tool for your needs.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Model Selection -->
+  <section class="py-8 border-b border-slate-700/50">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Model Selector 1 -->
+        <div>
+          <label for="model1" class="block text-sm font-medium text-slate-400 mb-2">Model 1</label>
+          <select 
+            id="model1" 
+            class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-indigo-500 transition-colors"
+          >
+            <option value="">Select a model...</option>
+            {sortedModels.map((model) => (
+              <option value={model.id}>{model.data.name} ({model.data.company})</option>
+            ))}
+          </select>
+        </div>
+        
+        <!-- Model Selector 2 -->
+        <div>
+          <label for="model2" class="block text-sm font-medium text-slate-400 mb-2">Model 2</label>
+          <select 
+            id="model2" 
+            class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-indigo-500 transition-colors"
+          >
+            <option value="">Select a model...</option>
+            {sortedModels.map((model) => (
+              <option value={model.id}>{model.data.name} ({model.data.company})</option>
+            ))}
+          </select>
+        </div>
+        
+        <!-- Model Selector 3 -->
+        <div>
+          <label for="model3" class="block text-sm font-medium text-slate-400 mb-2">Model 3 (Optional)</label>
+          <select 
+            id="model3" 
+            class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-indigo-500 transition-colors"
+          >
+            <option value="">Select a model...</option>
+            {sortedModels.map((model) => (
+              <option value={model.id}>{model.data.name} ({model.data.company})</option>
+            ))}
+          </select>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Comparison Table -->
+  <section class="py-12">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <!-- Placeholder when no models selected -->
+      <div id="placeholder" class="text-center py-16">
+        <svg class="w-20 h-20 mx-auto text-slate-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+        <h3 class="text-xl font-semibold text-white mb-2">Select models to compare</h3>
+        <p class="text-slate-400">Choose at least two models from the dropdowns above</p>
+      </div>
+      
+      <!-- Comparison Table (hidden by default) -->
+      <div id="comparison-table" class="hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr id="table-header" class="border-b border-slate-700">
+                <th class="text-left py-4 px-4 text-slate-400 font-medium w-40">Feature</th>
+                <!-- Dynamic headers will be inserted here -->
+              </tr>
+            </thead>
+            <tbody id="table-body">
+              <!-- Dynamic rows will be inserted here -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<!-- Model Data for JavaScript -->
+<script define:vars={{ sortedModels }}>
+  // Store model data for client-side comparison
+  const modelData = {};
+  sortedModels.forEach(model => {
+    modelData[model.id] = {
+      name: model.data.name,
+      company: model.data.company,
+      status: model.data.status,
+      categories: model.data.categories,
+      capabilities: model.data.capabilities,
+      pricing: model.data.pricing,
+      quality: model.data.quality,
+      features: model.data.features,
+      uniqueFeatures: model.data.uniqueFeatures || [],
+      limitations: model.data.limitations || [],
+      useCases: model.data.useCases,
+      access: model.data.access
+    };
+  });
+  
+  // Make modelData globally available
+  window.modelData = modelData;
+</script>
+
+<!-- Comparison Logic -->
+<script>
+  const model1Select = document.getElementById('model1') as HTMLSelectElement;
+  const model2Select = document.getElementById('model2') as HTMLSelectElement;
+  const model3Select = document.getElementById('model3') as HTMLSelectElement;
+  const placeholder = document.getElementById('placeholder');
+  const comparisonTable = document.getElementById('comparison-table');
+  const tableHeader = document.getElementById('table-header');
+  const tableBody = document.getElementById('table-body');
+  
+  const statusStyles: Record<string, string> = {
+    released: 'badge-released',
+    beta: 'badge-beta',
+    alpha: 'badge-alpha',
+    waitlist: 'badge-waitlist',
+    research: 'badge-research',
+  };
+  
+  function renderStars(rating: number): string {
+    return Array.from({ length: 5 }, (_, i) => 
+      i < rating ? '★' : '☆'
+    ).join('');
+  }
+  
+  function getSelectedModels(): string[] {
+    const selected: string[] = [];
+    if (model1Select?.value) selected.push(model1Select.value);
+    if (model2Select?.value) selected.push(model2Select.value);
+    if (model3Select?.value) selected.push(model3Select.value);
+    return selected;
+  }
+  
+  function updateComparison() {
+    const selected = getSelectedModels();
+    
+    if (selected.length < 2) {
+      placeholder?.classList.remove('hidden');
+      comparisonTable?.classList.add('hidden');
+      return;
+    }
+    
+    placeholder?.classList.add('hidden');
+    comparisonTable?.classList.remove('hidden');
+    
+    // Build header
+    let headerHtml = '<th class="text-left py-4 px-4 text-slate-400 font-medium w-40">Feature</th>';
+    selected.forEach(id => {
+      const model = (window as any).modelData[id];
+      if (model) {
+        headerHtml += `
+          <th class="text-left py-4 px-4">
+            <div class="flex items-center gap-2">
+              <span class="text-white font-semibold">${model.name}</span>
+              <span class="badge ${statusStyles[model.status]}">${model.status}</span>
+            </div>
+            <p class="text-slate-400 text-sm">${model.company}</p>
+          </th>
+        `;
+      }
+    });
+    if (tableHeader) tableHeader.innerHTML = headerHtml;
+    
+    // Build body
+    const rows = [
+      { label: 'Max Resolution', key: 'capabilities.maxResolution' },
+      { label: 'Max Duration', key: 'capabilities.maxDuration' },
+      { label: 'Frame Rate', key: 'capabilities.frameRate' },
+      { label: 'Audio Generation', key: 'capabilities.audioGeneration', format: (v: boolean) => v ? '✅ Yes' : '❌ No' },
+      { label: 'Aspect Ratios', key: 'capabilities.aspectRatios', format: (v: string[]) => v.join(', ') },
+      { label: 'Pricing Model', key: 'pricing.model', format: (v: string) => v.charAt(0).toUpperCase() + v.slice(1) },
+      { label: 'Starting Price', key: 'pricing.startingPrice', format: (v: string) => v || 'Free' },
+      { label: 'Platforms', key: 'access.platform', format: (v: string[]) => v.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(', ') },
+      { label: 'Output Quality', key: 'quality.outputQuality', format: (v: number) => `<span class="text-yellow-400">${renderStars(v)}</span> (${v}/5)` },
+      { label: 'Consistency', key: 'quality.consistency', format: (v: number) => `<span class="text-yellow-400">${renderStars(v)}</span> (${v}/5)` },
+      { label: 'Speed', key: 'quality.speed', format: (v: number) => `<span class="text-yellow-400">${renderStars(v)}</span> (${v}/5)` },
+    ];
+    
+    let bodyHtml = '';
+    
+    rows.forEach(row => {
+      bodyHtml += `<tr class="border-b border-slate-700/50 hover:bg-slate-800/30">`;
+      bodyHtml += `<td class="py-4 px-4 text-slate-400">${row.label}</td>`;
+      
+      selected.forEach(id => {
+        const model = (window as any).modelData[id];
+        let value: any;
+        
+        if (row.key.includes('.')) {
+          const [parent, child] = row.key.split('.');
+          value = model?.[parent]?.[child];
+        } else {
+          value = model?.[row.key];
+        }
+        
+        if (row.format && value !== undefined) {
+          value = row.format(value);
+        }
+        
+        bodyHtml += `<td class="py-4 px-4 text-white">${value || 'N/A'}</td>`;
+      });
+      
+      bodyHtml += `</tr>`;
+    });
+    
+    // Categories row
+    bodyHtml += `<tr class="border-b border-slate-700/50 hover:bg-slate-800/30">`;
+    bodyHtml += `<td class="py-4 px-4 text-slate-400">Categories</td>`;
+    selected.forEach(id => {
+      const model = (window as any).modelData[id];
+      const cats = model?.categories?.map((c: string) => {
+        const names: Record<string, string> = {
+          'text-to-video': 'Text-to-Video',
+          'image-to-video': 'Image-to-Video',
+          'video-to-video': 'Video-to-Video',
+          'animation': 'Animation',
+        };
+        return names[c] || c;
+      }).join(', ') || 'N/A';
+      bodyHtml += `<td class="py-4 px-4 text-white">${cats}</td>`;
+    });
+    bodyHtml += `</tr>`;
+    
+    // Use Cases row
+    bodyHtml += `<tr class="border-b border-slate-700/50 hover:bg-slate-800/30">`;
+    bodyHtml += `<td class="py-4 px-4 text-slate-400">Use Cases</td>`;
+    selected.forEach(id => {
+      const model = (window as any).modelData[id];
+      const useCases = model?.useCases?.join(', ') || 'N/A';
+      bodyHtml += `<td class="py-4 px-4 text-white text-sm">${useCases}</td>`;
+    });
+    bodyHtml += `</tr>`;
+    
+    // Key Features row
+    bodyHtml += `<tr class="border-b border-slate-700/50 hover:bg-slate-800/30">`;
+    bodyHtml += `<td class="py-4 px-4 text-slate-400">Key Features</td>`;
+    selected.forEach(id => {
+      const model = (window as any).modelData[id];
+      const features = model?.features?.slice(0, 5).map((f: string) => `<li class="text-sm">• ${f}</li>`).join('') || 'N/A';
+      bodyHtml += `<td class="py-4 px-4 text-white"><ul class="list-none">${features}</ul></td>`;
+    });
+    bodyHtml += `</tr>`;
+    
+    // Links row
+    bodyHtml += `<tr class="border-b border-slate-700/50">`;
+    bodyHtml += `<td class="py-4 px-4 text-slate-400">Links</td>`;
+    selected.forEach(id => {
+      const model = (window as any).modelData[id];
+      bodyHtml += `<td class="py-4 px-4">
+        <a href="${model?.access?.url}" target="_blank" rel="noopener" class="text-indigo-400 hover:text-indigo-300 text-sm">Visit Platform →</a>
+        <br>
+        <a href="/models/${id}" class="text-slate-400 hover:text-white text-sm">View Details →</a>
+      </td>`;
+    });
+    bodyHtml += `</tr>`;
+    
+    if (tableBody) tableBody.innerHTML = bodyHtml;
+  }
+  
+  // Add event listeners
+  model1Select?.addEventListener('change', updateComparison);
+  model2Select?.addEventListener('change', updateComparison);
+  model3Select?.addEventListener('change', updateComparison);
+</script>

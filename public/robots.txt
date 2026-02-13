@@ -1,0 +1,11 @@
+# AI Video Directory - robots.txt
+# https://aivideodirectory.com
+
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://aivideodirectory.com/sitemap-index.xml
+
+# Crawl-delay for polite crawling
+Crawl-delay: 1

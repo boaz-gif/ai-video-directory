@@ -1,0 +1,674 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ModelCard from '../components/ModelCard.astro';
+import { getCollection } from 'astro:content';
+
+// Get all models from content collection
+const models = await getCollection('models');
+
+// Sort models: featured first, then alphabetically
+const sortedModels = models.sort((a, b) => {
+  if (a.data.featured && !b.data.featured) return -1;
+  if (!a.data.featured && b.data.featured) return 1;
+  return a.data.name.localeCompare(b.data.name);
+});
+
+// Get unique categories for filtering
+const allCategories = models.flatMap(model => model.data.categories);
+const uniqueCategories = [...new Set(allCategories)];
+
+// Category display names
+const categoryNames: Record<string, string> = {
+  'text-to-video': 'Text-to-Video',
+  'image-to-video': 'Image-to-Video',
+  'video-to-video': 'Video-to-Video',
+  'animation': 'Animation',
+};
+
+// Prepare model data for client-side
+const modelData = sortedModels.map(model => ({
+  id: model.id,
+  name: model.data.name,
+  company: model.data.company,
+  status: model.data.status,
+  shortDescription: model.data.shortDescription,
+  description: model.data.description,
+  categories: model.data.categories,
+  pricing: model.data.pricing,
+  capabilities: model.data.capabilities,
+  quality: model.data.quality,
+  featured: model.data.featured,
+}));
+---
+
+<BaseLayout title="Home">
+  <!-- Hero Section -->
+  <section class="hero-gradient py-16 sm:py-24">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-4xl mx-auto">
+        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6">
+          Discover the Best
+          <span class="gradient-text block mt-2">AI Video Generation Models</span>
+        </h1>
+        <p class="text-lg sm:text-xl text-slate-400 mb-8 max-w-2xl mx-auto">
+          Your comprehensive directory of AI video generation tools. Compare features, pricing, and capabilities to find the perfect model for your creative projects.
+        </p>
+        
+        <!-- Search Bar -->
+        <div class="max-w-xl mx-auto">
+          <div class="relative">
+            <input 
+              type="search" 
+              id="search-input"
+              placeholder="Search models by name, company, or feature..."
+              class="w-full px-6 py-4 pl-14 pr-12 rounded-2xl bg-slate-800 border border-slate-700 text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+              aria-label="Search models"
+              autocomplete="off"
+            />
+            <svg class="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <!-- Loading indicator -->
+            <div id="search-loading" class="absolute right-5 top-1/2 -translate-y-1/2 hidden">
+              <svg class="animate-spin w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats Section -->
+  <section class="py-8 border-y border-slate-700/50 bg-slate-800/30">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-8">
+        <div class="text-center">
+          <p class="text-3xl sm:text-4xl font-bold text-white">{models.length}</p>
+          <p class="text-slate-400 text-sm mt-1">AI Models</p>
+        </div>
+        <div class="text-center">
+          <p class="text-3xl sm:text-4xl font-bold text-white">{uniqueCategories.length}</p>
+          <p class="text-slate-400 text-sm mt-1">Categories</p>
+        </div>
+        <div class="text-center">
+          <p class="text-3xl sm:text-4xl font-bold text-white">{models.filter(m => m.data.status === 'released').length}</p>
+          <p class="text-slate-400 text-sm mt-1">Released</p>
+        </div>
+        <div class="text-center">
+          <p class="text-3xl sm:text-4xl font-bold text-white">{models.filter(m => m.data.pricing.model === 'free' || m.data.pricing.model === 'freemium').length}</p>
+          <p class="text-slate-400 text-sm mt-1">Free Options</p>
+        </div>
+        <div class="text-center">
+          <p class="text-3xl sm:text-4xl font-bold text-white" id="favorites-count">0</p>
+          <p class="text-slate-400 text-sm mt-1">Favorites</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Filters & Sort Section -->
+  <section class="py-6 border-b border-slate-700/50">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <!-- Category Filters -->
+        <div class="flex flex-wrap items-center gap-3">
+          <span class="text-slate-400 text-sm font-medium">Filter by:</span>
+          <button 
+            class="category-filter active px-4 py-2 rounded-lg text-sm font-medium transition-all bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
+            data-category="all"
+            aria-pressed="true"
+          >
+            All Models
+          </button>
+          {uniqueCategories.map((category) => (
+            <button 
+              class="category-filter px-4 py-2 rounded-lg text-sm font-medium transition-all bg-slate-800 text-slate-300 border border-slate-700 hover:border-indigo-500/50 hover:text-white"
+              data-category={category}
+              aria-pressed="false"
+            >
+              {categoryNames[category] || category}
+            </button>
+          ))}
+        </div>
+        
+        <!-- Sort & Favorites Toggle -->
+        <div class="flex items-center gap-4">
+          <!-- Favorites Toggle -->
+          <button 
+            id="favorites-toggle"
+            class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all bg-slate-800 text-slate-300 border border-slate-700 hover:border-red-500/50 hover:text-white"
+            aria-pressed="false"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+            <span>Favorites</span>
+            <span id="favorites-badge" class="hidden px-1.5 py-0.5 text-xs rounded-full bg-red-500 text-white">0</span>
+          </button>
+          
+          <!-- Sort Dropdown -->
+          <div class="relative">
+            <label for="sort-select" class="sr-only">Sort models</label>
+            <select 
+              id="sort-select"
+              class="appearance-none px-4 py-2 pr-10 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:border-indigo-500/50 focus:outline-none focus:border-indigo-500 cursor-pointer"
+            >
+              <option value="quality-desc">Quality: High to Low</option>
+              <option value="quality-asc">Quality: Low to High</option>
+              <option value="name-asc">Name: A to Z</option>
+              <option value="name-desc">Name: Z to A</option>
+              <option value="price-asc">Price: Low to High</option>
+              <option value="price-desc">Price: High to Low</option>
+            </select>
+            <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Active Filters Display -->
+      <div id="active-filters" class="hidden mt-4 flex flex-wrap items-center gap-2">
+        <span class="text-slate-400 text-sm">Active filters:</span>
+        <div id="filter-tags" class="flex flex-wrap gap-2"></div>
+        <button id="clear-filters" class="text-sm text-indigo-400 hover:text-indigo-300 ml-2">
+          Clear all
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Models Grid -->
+  <section class="py-12">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <!-- Results Count -->
+      <div class="flex items-center justify-between mb-6">
+        <p id="results-count" class="text-slate-400 text-sm">
+          Showing <span class="text-white font-medium">{models.length}</span> models
+        </p>
+      </div>
+      
+      <div id="models-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {sortedModels.map((model) => (
+          <div 
+            class="model-card" 
+            data-model-id={model.id}
+            data-categories={JSON.stringify(model.data.categories)} 
+            data-name={model.data.name.toLowerCase()} 
+            data-company={model.data.company.toLowerCase()}
+            data-description={model.data.description.toLowerCase()}
+            data-quality={model.data.quality.outputQuality}
+            data-price={model.data.pricing.startingPrice || '0'}
+          >
+            <ModelCard
+              name={model.data.name}
+              company={model.data.company}
+              slug={model.id}
+              status={model.data.status}
+              shortDescription={model.data.shortDescription}
+              categories={model.data.categories}
+              pricing={model.data.pricing}
+              capabilities={model.data.capabilities}
+              quality={model.data.quality}
+              featured={model.data.featured}
+            />
+          </div>
+        ))}
+      </div>
+      
+      <!-- No Results Message -->
+      <div id="no-results" class="hidden text-center py-16">
+        <svg class="w-16 h-16 mx-auto text-slate-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <h3 class="text-xl font-semibold text-white mb-2">No models found</h3>
+        <p class="text-slate-400 mb-6">Try adjusting your search or filter criteria</p>
+        <button id="reset-search" class="btn-primary">
+          Reset Filters
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="py-16 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-cyan-500/10">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h2 class="text-2xl sm:text-3xl font-bold text-white mb-4">
+        Compare Models Side by Side
+      </h2>
+      <p class="text-slate-400 mb-8 max-w-2xl mx-auto">
+        Use our comparison tool to evaluate features, pricing, and capabilities across multiple AI video models.
+      </p>
+      <a 
+        href="/compare" 
+        class="inline-flex items-center gap-2 btn-primary"
+      >
+        <span>Start Comparing</span>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </a>
+    </div>
+  </section>
+</BaseLayout>
+
+<!-- Model Data for Client-side -->
+<script define:vars={{ modelData }}>
+  window.modelData = modelData;
+</script>
+
+<!-- Client-side Interactive Features -->
+<script>
+  // State management
+  interface AppState {
+    search: string;
+    category: string;
+    sort: string;
+    showFavorites: boolean;
+    favorites: string[];
+  }
+  
+  const state: AppState = {
+    search: '',
+    category: 'all',
+    sort: 'quality-desc',
+    showFavorites: false,
+    favorites: []
+  };
+  
+  // DOM Elements
+  const searchInput = document.getElementById('search-input') as HTMLInputElement;
+  const searchLoading = document.getElementById('search-loading');
+  const categoryButtons = document.querySelectorAll('.category-filter');
+  const sortSelect = document.getElementById('sort-select') as HTMLSelectElement;
+  const favoritesToggle = document.getElementById('favorites-toggle') as HTMLButtonElement;
+  const favoritesBadge = document.getElementById('favorites-badge');
+  const favoritesCount = document.getElementById('favorites-count');
+  const modelCards = document.querySelectorAll('.model-card');
+  const noResults = document.getElementById('no-results');
+  const resultsCount = document.getElementById('results-count');
+  const activeFilters = document.getElementById('active-filters');
+  const filterTags = document.getElementById('filter-tags');
+  const clearFiltersBtn = document.getElementById('clear-filters');
+  const resetSearchBtn = document.getElementById('reset-search');
+  
+  // Debounce utility
+  function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
+    let timeout: ReturnType<typeof setTimeout>;
+    return ((...args: Parameters<T>) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func(...args), wait);
+    }) as T;
+  }
+  
+  // Load favorites from localStorage
+  function loadFavorites(): string[] {
+    try {
+      const stored = localStorage.getItem('ai-video-favorites');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  }
+  
+  // Save favorites to localStorage
+  function saveFavorites(favorites: string[]): void {
+    try {
+      localStorage.setItem('ai-video-favorites', JSON.stringify(favorites));
+    } catch (e) {
+      console.error('Failed to save favorites:', e);
+    }
+  }
+  
+  // Update favorites UI
+  function updateFavoritesUI(): void {
+    const count = state.favorites.length;
+    
+    // Update badge
+    if (favoritesBadge) {
+      if (count > 0) {
+        favoritesBadge.textContent = count.toString();
+        favoritesBadge.classList.remove('hidden');
+      } else {
+        favoritesBadge.classList.add('hidden');
+      }
+    }
+    
+    // Update stats count
+    if (favoritesCount) {
+      favoritesCount.textContent = count.toString();
+    }
+    
+    // Update toggle button
+    if (favoritesToggle) {
+      favoritesToggle.setAttribute('aria-pressed', state.showFavorites.toString());
+      if (state.showFavorites) {
+        favoritesToggle.classList.add('border-red-500/50', 'text-red-400');
+        favoritesToggle.classList.remove('border-slate-700', 'text-slate-300');
+      } else {
+        favoritesToggle.classList.remove('border-red-500/50', 'text-red-400');
+        favoritesToggle.classList.add('border-slate-700', 'text-slate-300');
+      }
+    }
+    
+    // Update favorite buttons on cards
+    document.querySelectorAll('.favorite-btn').forEach((btn) => {
+      const slug = btn.getAttribute('data-slug');
+      const isFavorite = slug ? state.favorites.includes(slug) : false;
+      btn.setAttribute('aria-pressed', isFavorite.toString());
+    });
+  }
+  
+  // Parse price string to number
+  function parsePrice(priceStr: string): number {
+    if (!priceStr || priceStr === 'Free') return 0;
+    const match = priceStr.match(/\$?(\d+(?:\.\d+)?)/);
+    return match ? parseFloat(match[1]) : 0;
+  }
+  
+  // Sort models
+  function sortModels(models: NodeListOf<Element>): Element[] {
+    const modelsArray = Array.from(models);
+    
+    return modelsArray.sort((a, b) => {
+      const aQuality = parseInt(a.getAttribute('data-quality') || '0');
+      const bQuality = parseInt(b.getAttribute('data-quality') || '0');
+      const aPrice = parsePrice(a.getAttribute('data-price') || '0');
+      const bPrice = parsePrice(b.getAttribute('data-price') || '0');
+      const aName = a.getAttribute('data-name') || '';
+      const bName = b.getAttribute('data-name') || '';
+      
+      switch (state.sort) {
+        case 'quality-desc':
+          return bQuality - aQuality;
+        case 'quality-asc':
+          return aQuality - bQuality;
+        case 'price-asc':
+          return aPrice - bPrice;
+        case 'price-desc':
+          return bPrice - aPrice;
+        case 'name-asc':
+          return aName.localeCompare(bName);
+        case 'name-desc':
+          return bName.localeCompare(aName);
+        default:
+          return 0;
+      }
+    });
+  }
+  
+  // Filter and display models
+  function filterAndDisplayModels(): void {
+    let visibleCount = 0;
+    const grid = document.getElementById('models-grid');
+    
+    // Filter models
+    modelCards.forEach((card) => {
+      const categories = JSON.parse(card.getAttribute('data-categories') || '[]');
+      const name = card.getAttribute('data-name') || '';
+      const company = card.getAttribute('data-company') || '';
+      const description = card.getAttribute('data-description') || '';
+      const modelId = card.getAttribute('data-model-id') || '';
+      
+      const matchesCategory = state.category === 'all' || categories.includes(state.category);
+      const matchesSearch = state.search === '' || 
+        name.includes(state.search.toLowerCase()) || 
+        company.includes(state.search.toLowerCase()) ||
+        description.includes(state.search.toLowerCase());
+      const matchesFavorites = !state.showFavorites || state.favorites.includes(modelId);
+      
+      if (matchesCategory && matchesSearch && matchesFavorites) {
+        (card as HTMLElement).style.display = 'block';
+        visibleCount++;
+      } else {
+        (card as HTMLElement).style.display = 'none';
+      }
+    });
+    
+    // Sort visible models
+    const sortedModels = sortModels(modelCards);
+    sortedModels.forEach((card) => {
+      if ((card as HTMLElement).style.display !== 'none') {
+        grid?.appendChild(card);
+      }
+    });
+    
+    // Update results count
+    if (resultsCount) {
+      resultsCount.innerHTML = `Showing <span class="text-white font-medium">${visibleCount}</span> model${visibleCount !== 1 ? 's' : ''}`;
+    }
+    
+    // Show/hide no results message
+    if (noResults) {
+      noResults.classList.toggle('hidden', visibleCount > 0);
+    }
+    
+    // Update active filters display
+    updateActiveFilters();
+    
+    // Update URL
+    updateURL();
+  }
+  
+  // Update active filters display
+  function updateActiveFilters(): void {
+    const hasFilters = state.search !== '' || state.category !== 'all' || state.showFavorites;
+    
+    if (activeFilters) {
+      activeFilters.classList.toggle('hidden', !hasFilters);
+    }
+    
+    if (filterTags) {
+      let tagsHTML = '';
+      
+      if (state.search) {
+        tagsHTML += `<span class="px-3 py-1 rounded-full bg-slate-700 text-slate-300 text-sm flex items-center gap-2">
+          Search: "${state.search}"
+          <button class="hover:text-white" data-clear="search" aria-label="Clear search">×</button>
+        </span>`;
+      }
+      
+      if (state.category !== 'all') {
+        const categoryNames: Record<string, string> = {
+          'text-to-video': 'Text-to-Video',
+          'image-to-video': 'Image-to-Video',
+          'video-to-video': 'Video-to-Video',
+          'animation': 'Animation',
+        };
+        tagsHTML += `<span class="px-3 py-1 rounded-full bg-slate-700 text-slate-300 text-sm flex items-center gap-2">
+          ${categoryNames[state.category] || state.category}
+          <button class="hover:text-white" data-clear="category" aria-label="Clear category filter">×</button>
+        </span>`;
+      }
+      
+      if (state.showFavorites) {
+        tagsHTML += `<span class="px-3 py-1 rounded-full bg-red-500/20 text-red-400 text-sm flex items-center gap-2">
+          Favorites only
+          <button class="hover:text-white" data-clear="favorites" aria-label="Clear favorites filter">×</button>
+        </span>`;
+      }
+      
+      filterTags.innerHTML = tagsHTML;
+      
+      // Add event listeners to clear buttons
+      filterTags.querySelectorAll('button[data-clear]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const clearType = btn.getAttribute('data-clear');
+          if (clearType === 'search') {
+            state.search = '';
+            if (searchInput) searchInput.value = '';
+          } else if (clearType === 'category') {
+            state.category = 'all';
+            updateCategoryButtons();
+          } else if (clearType === 'favorites') {
+            state.showFavorites = false;
+          }
+          filterAndDisplayModels();
+          updateFavoritesUI();
+        });
+      });
+    }
+  }
+  
+  // Update category buttons
+  function updateCategoryButtons(): void {
+    categoryButtons.forEach((btn) => {
+      const category = btn.getAttribute('data-category') || 'all';
+      const isActive = category === state.category;
+      
+      btn.setAttribute('aria-pressed', isActive.toString());
+      
+      if (isActive) {
+        btn.classList.add('active', 'bg-indigo-500/20', 'text-indigo-400', 'border-indigo-500/30');
+        btn.classList.remove('bg-slate-800', 'text-slate-300', 'border-slate-700');
+      } else {
+        btn.classList.remove('active', 'bg-indigo-500/20', 'text-indigo-400', 'border-indigo-500/30');
+        btn.classList.add('bg-slate-800', 'text-slate-300', 'border-slate-700');
+      }
+    });
+  }
+  
+  // Update URL with current state
+  function updateURL(): void {
+    const params = new URLSearchParams();
+    
+    if (state.search) params.set('search', state.search);
+    if (state.category !== 'all') params.set('category', state.category);
+    if (state.sort !== 'quality-desc') params.set('sort', state.sort);
+    if (state.showFavorites) params.set('favorites', 'true');
+    
+    const newURL = params.toString() 
+      ? `${window.location.pathname}?${params.toString()}`
+      : window.location.pathname;
+    
+    window.history.replaceState(state, '', newURL);
+  }
+  
+  // Load state from URL
+  function loadStateFromURL(): void {
+    const params = new URLSearchParams(window.location.search);
+    
+    state.search = params.get('search') || '';
+    state.category = params.get('category') || 'all';
+    state.sort = params.get('sort') || 'quality-desc';
+    state.showFavorites = params.get('favorites') === 'true';
+    
+    // Update UI to match state
+    if (searchInput) searchInput.value = state.search;
+    if (sortSelect) sortSelect.value = state.sort;
+    updateCategoryButtons();
+  }
+  
+  // Initialize
+  function init(): void {
+    // Load favorites
+    state.favorites = loadFavorites();
+    
+    // Load state from URL
+    loadStateFromURL();
+    
+    // Update UI
+    updateFavoritesUI();
+    filterAndDisplayModels();
+    
+    // Search input with debounce
+    const debouncedSearch = debounce((value: string) => {
+      state.search = value;
+      filterAndDisplayModels();
+      if (searchLoading) searchLoading.classList.add('hidden');
+    }, 300);
+    
+    searchInput?.addEventListener('input', (e) => {
+      if (searchLoading) searchLoading.classList.remove('hidden');
+      debouncedSearch((e.target as HTMLInputElement).value);
+    });
+    
+    // Category buttons
+    categoryButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.category = btn.getAttribute('data-category') || 'all';
+        updateCategoryButtons();
+        filterAndDisplayModels();
+      });
+    });
+    
+    // Sort select
+    sortSelect?.addEventListener('change', (e) => {
+      state.sort = (e.target as HTMLSelectElement).value;
+      filterAndDisplayModels();
+    });
+    
+    // Favorites toggle
+    favoritesToggle?.addEventListener('click', () => {
+      state.showFavorites = !state.showFavorites;
+      updateFavoritesUI();
+      filterAndDisplayModels();
+    });
+    
+    // Favorite buttons on cards
+    document.querySelectorAll('.favorite-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const slug = btn.getAttribute('data-slug');
+        if (!slug) return;
+        
+        const index = state.favorites.indexOf(slug);
+        if (index === -1) {
+          state.favorites.push(slug);
+        } else {
+          state.favorites.splice(index, 1);
+        }
+        
+        saveFavorites(state.favorites);
+        updateFavoritesUI();
+        
+        // Re-filter if showing favorites only
+        if (state.showFavorites) {
+          filterAndDisplayModels();
+        }
+      });
+    });
+    
+    // Clear all filters
+    clearFiltersBtn?.addEventListener('click', () => {
+      state.search = '';
+      state.category = 'all';
+      state.showFavorites = false;
+      
+      if (searchInput) searchInput.value = '';
+      updateCategoryButtons();
+      updateFavoritesUI();
+      filterAndDisplayModels();
+    });
+    
+    // Reset search button
+    resetSearchBtn?.addEventListener('click', () => {
+      state.search = '';
+      state.category = 'all';
+      state.showFavorites = false;
+      
+      if (searchInput) searchInput.value = '';
+      updateCategoryButtons();
+      updateFavoritesUI();
+      filterAndDisplayModels();
+    });
+    
+    // Handle browser back/forward
+    window.addEventListener('popstate', () => {
+      loadStateFromURL();
+      filterAndDisplayModels();
+    });
+  }
+  
+  // Run initialization when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+</script>

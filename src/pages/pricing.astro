@@ -1,0 +1,256 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+// Get all models
+const models = await getCollection('models');
+
+// Sort models by starting price (free first, then by name)
+const sortedModels = models.sort((a, b) => {
+  const aPrice = a.data.pricing.startingPrice || 'Free';
+  const bPrice = b.data.pricing.startingPrice || 'Free';
+  
+  // Free models first
+  if (aPrice === 'Free' && bPrice !== 'Free') return -1;
+  if (aPrice !== 'Free' && bPrice === 'Free') return 1;
+  
+  // Then alphabetically
+  return a.data.name.localeCompare(b.data.name);
+});
+
+// Group models by pricing model
+const freeModels = models.filter(m => m.data.pricing.model === 'free');
+const freemiumModels = models.filter(m => m.data.pricing.model === 'freemium');
+const subscriptionModels = models.filter(m => m.data.pricing.model === 'subscription');
+const creditModels = models.filter(m => m.data.pricing.model === 'credits');
+
+// Status badge styling
+const statusStyles: Record<string, string> = {
+  released: 'badge-released',
+  beta: 'badge-beta',
+  alpha: 'badge-alpha',
+  waitlist: 'badge-waitlist',
+  research: 'badge-research',
+};
+---
+
+<BaseLayout title="Pricing" description="Compare pricing across AI video generation models. Find free, freemium, and subscription options for every budget.">
+  <!-- Breadcrumb -->
+  <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <nav class="flex items-center gap-2 text-sm text-slate-400">
+      <a href="/" class="hover:text-white transition-colors">Home</a>
+      <span>/</span>
+      <span class="text-white">Pricing</span>
+    </nav>
+  </div>
+
+  <!-- Hero Section -->
+  <section class="hero-gradient py-12 sm:py-16">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-3xl mx-auto">
+        <h1 class="text-3xl sm:text-4xl font-bold text-white mb-4">
+          AI Video Model Pricing
+        </h1>
+        <p class="text-lg text-slate-400">
+          Compare pricing across all AI video generation models. Find free options, freemium plans, and subscription details to choose the best fit for your budget.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing Overview Stats -->
+  <section class="py-8 border-y border-slate-700/50 bg-slate-800/30">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div class="text-center">
+          <p class="text-3xl font-bold text-green-400">{freeModels.length + freemiumModels.length}</p>
+          <p class="text-slate-400 text-sm">Free Options</p>
+        </div>
+        <div class="text-center">
+          <p class="text-3xl font-bold text-white">{subscriptionModels.length}</p>
+          <p class="text-slate-400 text-sm">Subscription Plans</p>
+        </div>
+        <div class="text-center">
+          <p class="text-3xl font-bold text-white">{models.filter(m => m.data.pricing.startingPrice && m.data.pricing.startingPrice.includes('$')).length}</p>
+          <p class="text-slate-400 text-sm">Paid Plans</p>
+        </div>
+        <div class="text-center">
+          <p class="text-3xl font-bold text-white">{models.length}</p>
+          <p class="text-slate-400 text-sm">Total Models</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Free & Freemium Models -->
+  <section class="py-12">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
+          <span class="text-xl">🆓</span>
+        </div>
+        <div>
+          <h2 class="text-xl font-bold text-white">Free & Freemium Models</h2>
+          <p class="text-slate-400 text-sm">Start creating without upfront costs</p>
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[...freeModels, ...freemiumModels].map((model) => (
+          <div class="card p-5">
+            <div class="flex items-start justify-between mb-3">
+              <div>
+                <h3 class="font-semibold text-white">{model.data.name}</h3>
+                <p class="text-slate-400 text-sm">{model.data.company}</p>
+              </div>
+              <span class={`badge ${statusStyles[model.data.status]}`}>{model.data.status}</span>
+            </div>
+            
+            <p class="text-slate-300 text-sm mb-3">{model.data.shortDescription}</p>
+            
+            <div class="flex items-center justify-between pt-3 border-t border-slate-700/50">
+              <div>
+                <p class="text-green-400 font-bold">
+                  {model.data.pricing.model === 'free' ? 'Free' : 'Freemium'}
+                </p>
+                {model.data.pricing.startingPrice && (
+                  <p class="text-slate-400 text-xs">Paid plans from {model.data.pricing.startingPrice}</p>
+                )}
+              </div>
+              <a href={`/models/${model.id}`} class="text-indigo-400 hover:text-indigo-300 text-sm">
+                View Details →
+              </a>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Subscription Models -->
+  <section class="py-12 bg-slate-800/30">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+          <span class="text-xl">💳</span>
+        </div>
+        <div>
+          <h2 class="text-xl font-bold text-white">Subscription Models</h2>
+          <p class="text-slate-400 text-sm">Monthly plans with consistent access</p>
+        </div>
+      </div>
+      
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="border-b border-slate-700">
+              <th class="text-left py-3 px-4 text-slate-400 font-medium">Model</th>
+              <th class="text-left py-3 px-4 text-slate-400 font-medium">Company</th>
+              <th class="text-left py-3 px-4 text-slate-400 font-medium">Starting Price</th>
+              <th class="text-left py-3 px-4 text-slate-400 font-medium">Status</th>
+              <th class="text-left py-3 px-4 text-slate-400 font-medium">Max Duration</th>
+              <th class="text-left py-3 px-4 text-slate-400 font-medium">Resolution</th>
+              <th class="text-right py-3 px-4 text-slate-400 font-medium">Link</th>
+            </tr>
+          </thead>
+          <tbody>
+            {subscriptionModels.map((model) => (
+              <tr class="border-b border-slate-700/50 hover:bg-slate-800/50">
+                <td class="py-4 px-4">
+                  <a href={`/models/${model.id}`} class="text-white font-medium hover:text-indigo-400 transition-colors">
+                    {model.data.name}
+                  </a>
+                </td>
+                <td class="py-4 px-4 text-slate-300">{model.data.company}</td>
+                <td class="py-4 px-4 text-white font-medium">{model.data.pricing.startingPrice || 'Contact'}</td>
+                <td class="py-4 px-4">
+                  <span class={`badge ${statusStyles[model.data.status]}`}>{model.data.status}</span>
+                </td>
+                <td class="py-4 px-4 text-slate-300">{model.data.capabilities.maxDuration}</td>
+                <td class="py-4 px-4 text-slate-300">{model.data.capabilities.maxResolution}</td>
+                <td class="py-4 px-4 text-right">
+                  <a href={`/models/${model.id}`} class="text-indigo-400 hover:text-indigo-300 text-sm">
+                    Details →
+                  </a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- All Pricing Table -->
+  <section class="py-12">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <h2 class="text-xl font-bold text-white mb-6">Complete Pricing Overview</h2>
+      
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="border-b border-slate-700">
+              <th class="text-left py-3 px-4 text-slate-400 font-medium">Model</th>
+              <th class="text-left py-3 px-4 text-slate-400 font-medium">Pricing Model</th>
+              <th class="text-left py-3 px-4 text-slate-400 font-medium">Starting Price</th>
+              <th class="text-left py-3 px-4 text-slate-400 font-medium">Free Tier</th>
+              <th class="text-right py-3 px-4 text-slate-400 font-medium">Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedModels.map((model) => (
+              <tr class="border-b border-slate-700/50 hover:bg-slate-800/50">
+                <td class="py-4 px-4">
+                  <span class="text-white font-medium">{model.data.name}</span>
+                  <span class="text-slate-400 text-sm ml-2">({model.data.company})</span>
+                </td>
+                <td class="py-4 px-4">
+                  <span class={`px-2 py-1 rounded text-xs font-medium ${
+                    model.data.pricing.model === 'free' ? 'bg-green-500/20 text-green-400' :
+                    model.data.pricing.model === 'freemium' ? 'bg-blue-500/20 text-blue-400' :
+                    model.data.pricing.model === 'subscription' ? 'bg-purple-500/20 text-purple-400' :
+                    'bg-slate-500/20 text-slate-400'
+                  }`}>
+                    {model.data.pricing.model}
+                  </span>
+                </td>
+                <td class="py-4 px-4 text-white font-medium">
+                  {model.data.pricing.startingPrice || 'Free'}
+                </td>
+                <td class="py-4 px-4 text-slate-300">
+                  {model.data.pricing.model === 'free' ? '✅ Full access' :
+                   model.data.pricing.model === 'freemium' ? '✅ Limited' :
+                   model.data.pricing.freeCredits ? `✅ ${model.data.pricing.freeCredits}` :
+                   '❌ No'}
+                </td>
+                <td class="py-4 px-4 text-right">
+                  <a href={`/models/${model.id}`} class="text-indigo-400 hover:text-indigo-300 text-sm">
+                    View →
+                  </a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-12 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-cyan-500/10">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h2 class="text-xl font-bold text-white mb-4">
+        Need Help Choosing?
+      </h2>
+      <p class="text-slate-400 mb-6">
+        Use our comparison tool to evaluate models side by side.
+      </p>
+      <a href="/compare" class="btn-primary inline-flex items-center gap-2">
+        <span>Compare Models</span>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </a>
+    </div>
+  </section>
+</BaseLayout>
