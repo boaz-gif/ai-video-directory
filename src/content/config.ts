@@ -83,6 +83,76 @@ const modelsCollection = defineCollection({
     description: z.string(),
     shortDescription: z.string(),
     featured: z.boolean().default(false),
+
+    // Latest News and Updates (v1.1)
+    latestNews: z
+      .array(
+        z.object({
+          date: z.string(),
+          title: z.string(),
+          description: z.string(),
+          type: z.enum(["release", "feature", "announcement", "update"]),
+          url: z.string().optional(),
+        }),
+      )
+      .optional(),
+
+    // Iteration History (v1.1)
+    iterationHistory: z
+      .array(
+        z.object({
+          version: z.string(),
+          releaseDate: z.string(),
+          majorChanges: z.array(z.string()),
+          newFeatures: z.array(z.string()).optional(),
+          improvements: z.array(z.string()).optional(),
+          deprecated: z.array(z.string()).optional(),
+        }),
+      )
+      .optional(),
+
+    // User Ratings (v1.1)
+    ratings: z
+      .object({
+        averageScore: z.number().min(0).max(5).default(0),
+        totalReviews: z.number().default(0),
+        breakdown: z
+          .object({
+            five: z.number().default(0),
+            four: z.number().default(0),
+            three: z.number().default(0),
+            two: z.number().default(0),
+            one: z.number().default(0),
+          })
+          .optional(),
+      })
+      .optional(),
+
+    // Video Gallery (v1.1)
+    videoGallery: z
+      .array(
+        z.object({
+          title: z.string(),
+          description: z.string(),
+          prompt: z.string().optional(),
+          videoUrl: z.string(),
+          thumbnailUrl: z.string(),
+          duration: z.string(),
+          resolution: z.string(),
+        }),
+      )
+      .optional(),
+
+    // Developer API Information (v1.1)
+    developerApi: z
+      .object({
+        available: z.boolean().default(false),
+        documentation: z.string().optional(),
+        pricing: z.string().optional(),
+        rateLimit: z.string().optional(),
+        sdkLanguages: z.array(z.string()).optional(),
+      })
+      .optional(),
   }),
 });
 

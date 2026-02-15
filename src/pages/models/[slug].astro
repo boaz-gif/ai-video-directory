@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
+import type { InferEntrySchema } from 'astro:content';
 
 export async function getStaticPaths() {
   const models = await getCollection('models');
@@ -12,6 +13,13 @@ export async function getStaticPaths() {
 
 const { model } = Astro.props;
 const { data } = model;
+
+// Type aliases for better type safety
+type ModelData = InferEntrySchema<'models'>;
+type PricingTier = NonNullable<ModelData['pricing']['tiers']>[number];
+type NewsItem = NonNullable<ModelData['latestNews']>[number];
+type VersionHistory = NonNullable<ModelData['iterationHistory']>[number];
+type VideoItem = NonNullable<ModelData['videoGallery']>[number];
 
 // Status badge styling
 const statusStyles: Record<string, string> = {
@@ -290,7 +298,7 @@ const breadcrumbSchema = {
           
           {data.pricing.tiers && data.pricing.tiers.length > 0 && (
             <div class="space-y-4">
-              {data.pricing.tiers.map((tier: any) => (
+              {data.pricing.tiers.map((tier: PricingTier) => (
                 <div class="p-4 rounded-xl bg-slate-800/50 border border-slate-700/50">
                   <div class="flex justify-between items-center mb-3">
                     <h3 class="font-semibold text-white">{tier.name}</h3>
@@ -343,6 +351,328 @@ const breadcrumbSchema = {
     </div>
   </section>
 
+  <!-- Latest News & Updates (v1.1) -->
+  {data.latestNews && data.latestNews.length > 0 && (
+    <section class="py-12 bg-slate-800/30">
+      <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 class="text-xl font-semibold text-white mb-6">Latest News & Updates</h2>
+        <div class="space-y-4">
+          {data.latestNews.map((news: NewsItem) => (
+            <div class="card p-4 sm:p-6 hover:border-indigo-500/30 transition-colors">
+              <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
+                <div class="flex items-center gap-3">
+                  <span class={`px-2 py-1 text-xs font-medium rounded-full ${
+                    news.type === 'release' ? 'bg-green-500/20 text-green-400' :
+                    news.type === 'feature' ? 'bg-blue-500/20 text-blue-400' :
+                    news.type === 'announcement' ? 'bg-purple-500/20 text-purple-400' :
+                    'bg-orange-500/20 text-orange-400'
+                  }`}>
+                    {news.type.charAt(0).toUpperCase() + news.type.slice(1)}
+                  </span>
+                  <span class="text-slate-500 text-sm">{news.date}</span>
+                </div>
+                {news.url && (
+                  <a 
+                    href={news.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    class="text-indigo-400 hover:text-indigo-300 text-sm flex items-center gap-1"
+                  >
+                    Read more
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                )}
+              </div>
+              <h3 class="text-lg font-semibold text-white mb-2">{news.title}</h3>
+              <p class="text-slate-400">{news.description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- Iteration History (v1.1) -->
+  {data.iterationHistory && data.iterationHistory.length > 0 && (
+    <section class="py-12">
+      <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 class="text-xl font-semibold text-white mb-6">Version History</h2>
+        <div class="relative">
+          <!-- Timeline line -->
+          <div class="absolute left-4 sm:left-8 top-0 bottom-0 w-0.5 bg-slate-700"></div>
+          
+          <div class="space-y-8">
+            {data.iterationHistory.map((version: VersionHistory, index: number) => (
+              <div class="relative pl-12 sm:pl-20">
+                <!-- Timeline dot -->
+                <div class={`absolute left-2 sm:left-6 w-4 h-4 rounded-full border-2 ${
+                  index === 0 ? 'bg-indigo-500 border-indigo-400' : 'bg-slate-800 border-slate-600'
+                }`}></div>
+                
+                <div class="card p-4 sm:p-6">
+                  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+                    <div>
+                      <h3 class="text-lg font-semibold text-white">Version {version.version}</h3>
+                      <p class="text-slate-500 text-sm">{version.releaseDate}</p>
+                    </div>
+                  </div>
+                  
+                  {version.majorChanges && version.majorChanges.length > 0 && (
+                    <div class="mb-4">
+                      <h4 class="text-sm font-medium text-slate-400 mb-2">Major Changes</h4>
+                      <ul class="space-y-2">
+                        {version.majorChanges.map((change: string) => (
+                          <li class="flex items-start gap-2 text-slate-300">
+                            <svg class="w-4 h-4 text-indigo-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                            </svg>
+                            {change}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {version.newFeatures && version.newFeatures.length > 0 && (
+                    <div class="mb-4">
+                      <h4 class="text-sm font-medium text-slate-400 mb-2">New Features</h4>
+                      <ul class="space-y-2">
+                        {version.newFeatures.map((feature: string) => (
+                          <li class="flex items-start gap-2 text-slate-300">
+                            <svg class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {version.improvements && version.improvements.length > 0 && (
+                    <div>
+                      <h4 class="text-sm font-medium text-slate-400 mb-2">Improvements</h4>
+                      <ul class="space-y-2">
+                        {version.improvements.map((improvement: string) => (
+                          <li class="flex items-start gap-2 text-slate-300">
+                            <svg class="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                            </svg>
+                            {improvement}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- User Ratings (v1.1) -->
+  {data.ratings && (
+    <section class="py-12 bg-slate-800/30">
+      <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 class="text-xl font-semibold text-white mb-6">Community Ratings</h2>
+        <div class="grid md:grid-cols-2 gap-8">
+          <!-- Overall Rating -->
+          <div class="card p-6 text-center">
+            <p class="text-5xl font-bold text-white mb-2">{data.ratings?.averageScore.toFixed(1)}</p>
+            <p class="text-2xl text-yellow-400 mb-2">{renderStars(Math.round(data.ratings?.averageScore ?? 0))}</p>
+            <p class="text-slate-400">Based on {data.ratings?.totalReviews.toLocaleString() ?? 0} reviews</p>
+          </div>
+          
+          <!-- Rating Breakdown -->
+          {data.ratings?.breakdown && (
+            <div class="card p-6">
+              <h3 class="text-lg font-semibold text-white mb-4">Rating Breakdown</h3>
+              <div class="space-y-3">
+                {[5, 4, 3, 2, 1].map((stars) => {
+                  const breakdown = data.ratings?.breakdown;
+                  const count = breakdown ? breakdown[stars === 5 ? 'five' : stars === 4 ? 'four' : stars === 3 ? 'three' : stars === 2 ? 'two' : 'one'] : 0;
+                  const totalReviews = data.ratings?.totalReviews ?? 1;
+                  const percentage = (count / totalReviews) * 100;
+                  return (
+                    <div class="flex items-center gap-3">
+                      <span class="text-yellow-400 w-12">{stars} ★</span>
+                      <div class="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
+                        <div 
+                          class="h-full bg-yellow-400 rounded-full transition-all duration-300"
+                          style={`width: ${percentage}%`}
+                        ></div>
+                      </div>
+                      <span class="text-slate-400 text-sm w-16 text-right">{count.toLocaleString()}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- Video Gallery (v1.1) -->
+  {data.videoGallery && data.videoGallery.length > 0 && (
+    <section class="py-12" id="video-gallery">
+      <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <h2 class="text-xl font-semibold text-white">Example Videos</h2>
+          <div class="flex flex-wrap gap-2">
+            <button 
+              class="gallery-filter active px-3 py-1.5 text-sm rounded-lg bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/30 transition-colors"
+              data-filter="all"
+            >
+              All
+            </button>
+            <button 
+              class="gallery-filter px-3 py-1.5 text-sm rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 transition-colors"
+              data-filter="4K"
+            >
+              4K
+            </button>
+            <button 
+              class="gallery-filter px-3 py-1.5 text-sm rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600 transition-colors"
+              data-filter="1080p"
+            >
+              1080p
+            </button>
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="gallery-grid">
+          {data.videoGallery.map((video: VideoItem, index: number) => (
+            <div 
+              class="gallery-item card overflow-hidden group cursor-pointer"
+              data-resolution={video.resolution}
+              data-index={index}
+            >
+              <div class="relative aspect-video bg-slate-800">
+                <img 
+                  src={video.thumbnailUrl} 
+                  alt={video.title}
+                  class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <div class="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                    <svg class="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                </div>
+                <div class="absolute top-2 right-2 flex gap-2">
+                  <span class="px-2 py-1 text-xs font-medium rounded bg-black/60 text-white">{video.duration}</span>
+                  <span class="px-2 py-1 text-xs font-medium rounded bg-indigo-500/80 text-white">{video.resolution}</span>
+                </div>
+              </div>
+              <div class="p-4">
+                <h3 class="font-semibold text-white mb-1 group-hover:text-indigo-400 transition-colors">{video.title}</h3>
+                <p class="text-sm text-slate-400 line-clamp-2">{video.description}</p>
+                {video.prompt && (
+                  <p class="text-xs text-slate-500 mt-2 italic">"{video.prompt}"</p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      <!-- Video Modal -->
+      <div id="video-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/90 backdrop-blur-sm" id="modal-backdrop"></div>
+        <div class="relative z-10 flex items-center justify-center min-h-screen p-4">
+          <div class="bg-slate-900 rounded-2xl overflow-hidden max-w-4xl w-full shadow-2xl">
+            <div class="relative aspect-video bg-black">
+              <video 
+                id="modal-video" 
+                class="w-full h-full"
+                controls
+                playsinline
+              >
+                <source src="" type="video/mp4" />
+              </video>
+            </div>
+            <div class="p-6">
+              <h3 id="modal-title" class="text-xl font-semibold text-white mb-2"></h3>
+              <p id="modal-description" class="text-slate-400 mb-4"></p>
+              <div class="flex flex-wrap gap-4 text-sm text-slate-500">
+                <span id="modal-duration"></span>
+                <span id="modal-resolution"></span>
+              </div>
+            </div>
+            <button 
+              id="modal-close" 
+              class="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors flex items-center justify-center"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- Developer API Info (v1.1) -->
+  {data.developerApi && data.developerApi.available && (
+    <section class="py-12 bg-slate-800/30">
+      <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 class="text-xl font-semibold text-white mb-6">Developer API</h2>
+        <div class="card p-6">
+          <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div>
+              <p class="text-slate-400 text-sm mb-1">Documentation</p>
+              {data.developerApi.documentation ? (
+                <a 
+                  href={data.developerApi.documentation} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  class="text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                >
+                  View Docs
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+              ) : (
+                <span class="text-slate-500">Not available</span>
+              )}
+            </div>
+            <div>
+              <p class="text-slate-400 text-sm mb-1">Pricing</p>
+              <p class="text-white">{data.developerApi.pricing || 'Contact for pricing'}</p>
+            </div>
+            <div>
+              <p class="text-slate-400 text-sm mb-1">Rate Limit</p>
+              <p class="text-white">{data.developerApi.rateLimit || 'N/A'}</p>
+            </div>
+            <div>
+              <p class="text-slate-400 text-sm mb-1">SDK Languages</p>
+              {data.developerApi.sdkLanguages && data.developerApi.sdkLanguages.length > 0 ? (
+                <div class="flex flex-wrap gap-2">
+                  {data.developerApi.sdkLanguages.map((lang: string) => (
+                    <span class="px-2 py-1 text-xs rounded bg-slate-700 text-slate-300">{lang}</span>
+                  ))}
+                </div>
+              ) : (
+                <span class="text-slate-500">N/A</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )}
+
   <!-- Last Updated -->
   <section class="py-8 border-t border-slate-700/50">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -352,3 +682,84 @@ const breadcrumbSchema = {
     </div>
   </section>
 </BaseLayout>
+
+<script>
+  // Video Gallery Filtering
+  document.addEventListener('DOMContentLoaded', () => {
+    const filterButtons = document.querySelectorAll('.gallery-filter');
+    const galleryItems = document.querySelectorAll('.gallery-item');
+    
+    filterButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const filter = button.getAttribute('data-filter');
+        
+        // Update active state
+        filterButtons.forEach(btn => {
+          btn.classList.remove('active', 'bg-indigo-500/20', 'text-indigo-400', 'border-indigo-500/30');
+          btn.classList.add('bg-slate-800', 'text-slate-400', 'border-slate-700');
+        });
+        button.classList.add('active', 'bg-indigo-500/20', 'text-indigo-400', 'border-indigo-500/30');
+        button.classList.remove('bg-slate-800', 'text-slate-400', 'border-slate-700');
+        
+        // Filter items
+        galleryItems.forEach(item => {
+          const resolution = item.getAttribute('data-resolution');
+          const htmlItem = item as HTMLElement;
+          if (filter === 'all' || resolution === filter) {
+            htmlItem.style.display = 'block';
+          } else {
+            htmlItem.style.display = 'none';
+          }
+        });
+      });
+    });
+    
+    // Video Modal
+    const modal = document.getElementById('video-modal');
+    const modalVideo = document.getElementById('modal-video') as HTMLVideoElement;
+    const modalTitle = document.getElementById('modal-title');
+    const modalDescription = document.getElementById('modal-description');
+    const modalDuration = document.getElementById('modal-duration');
+    const modalResolution = document.getElementById('modal-resolution');
+    const modalClose = document.getElementById('modal-close');
+    const modalBackdrop = document.getElementById('modal-backdrop');
+    
+    galleryItems.forEach(item => {
+      item.addEventListener('click', () => {
+        // Get video data from the clicked item
+        const title = item.querySelector('h3')?.textContent || '';
+        const description = item.querySelector('p')?.textContent || '';
+        const durationBadge = item.querySelector('.absolute.top-2.right-2 span:first-child')?.textContent || '';
+        const resolutionBadge = item.querySelector('.absolute.top-2.right-2 span:last-child')?.textContent || '';
+        
+        // For now, show placeholder (in production, videoUrl would come from data)
+        if (modalTitle) modalTitle.textContent = title;
+        if (modalDescription) modalDescription.textContent = description;
+        if (modalDuration) modalDuration.textContent = `Duration: ${durationBadge}`;
+        if (modalResolution) modalResolution.textContent = `Resolution: ${resolutionBadge}`;
+        
+        if (modal) modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      });
+    });
+    
+    const closeModal = () => {
+      if (modal) modal.classList.add('hidden');
+      if (modalVideo) {
+        modalVideo.pause();
+        modalVideo.currentTime = 0;
+      }
+      document.body.style.overflow = '';
+    };
+    
+    if (modalClose) modalClose.addEventListener('click', closeModal);
+    if (modalBackdrop) modalBackdrop.addEventListener('click', closeModal);
+    
+    // Close on escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !modal?.classList.contains('hidden')) {
+        closeModal();
+      }
+    });
+  });
+</script>
